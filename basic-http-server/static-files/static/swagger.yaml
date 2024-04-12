@@ -1,0 +1,31 @@
+openapi: 3.0.0
+info:
+  title: Пример API пользователей
+  version: 1.0.0
+  description: Пример API для работы с пользователями
+paths:
+  /users:
+    get:
+      summary: Получить список всех пользователей
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: Уникальный идентификатор пользователя
+                    name:
+                      type: string
+                      description: Имя пользователя
+                    email:
+                      type: string
+                      format: email
+                      description: Адрес электронной почты пользователя
+        '404':
+          description: Не найдено
