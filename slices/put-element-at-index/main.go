@@ -37,5 +37,5 @@ func second() {
 	copy(names[2:], names[1:])
 	names[1] = "joe"
 
-	fmt.Println("second example: names:", names)
+	fmt.Println("second example-1: names:", names)
 }

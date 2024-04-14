@@ -23,7 +23,7 @@ func transferFileContacts(filename string) error {
 }
 
 func main() {
-	err := transferFileContacts("./errors/example-failure/config/conf.json")
+	err := transferFileContacts("./errors/example-1-failure/config/conf.json")
 	if err != nil {
 		log.Printf("error occurred: %s", err)
 	}

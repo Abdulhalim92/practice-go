@@ -6,9 +6,9 @@ import (
 )
 
 func load() []byte {
-	data, err := os.ReadFile("./errors/example-failure/config/conf.json")
+	data, err := os.ReadFile("./errors/example-1-failure/config/conf.json")
 	fmt.Println(err)
-	// open ./errors/example-failure/config/conf.json: no such file or directory
+	// open ./errors/example-1-failure/config/conf.json: no such file or directory
 	return data
 }
 

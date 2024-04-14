@@ -8,7 +8,7 @@ import (
 const fileHeader = "APPCONF"
 
 func Load() (string, error) {
-	data, err := os.ReadFile("./errors/example-fix-2/config/config.json")
+	data, err := os.ReadFile("./errors/example-1-fix-2/config/config.json")
 	if err != nil {
 		return "", err
 	}
