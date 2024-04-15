@@ -22,12 +22,27 @@ type semResultWithError struct {
 	Err  error
 }
 
+// DeactivateUsersSem В рамках данного подхода создаётся, по сути, неограниченное количество
+// горутин. Их выполнение блокируется с помощью объекта Semaphore, который
+// ограничивает количество одновременно выполняемых горутин с помощью
+// буферизированного канала. В данном подходе на каждую задачу создаётся
+// горутина. Однако если буфер канала семафора переполнен, то при операции
+// Acquire горутина с задачей блокируется до тех пор, пока буфер не освободится
+// с помощью операции Release.
+// Для сбора результатов используется канал, из которого происходит чтение
+// в основной горутине (здесь, конечно, речь идёт о той, в которой выполняется
+// функция, это совсем не обязательно может быть горутина, в которой выполняется
+// функция main).
 func DeactivateUsersSem(usrs []users.User, wgCount int) ([]users.User, error) {
+	// создаем семафор и передаем ему канал с размером буфера равным
+	// ограничению на количество одновременно выполняемых горутин
 	sem := Semaphore{
 		C: make(chan struct{}, wgCount),
 	}
 
+	// канал для сбора результатов
 	outputCh := make(chan semResultWithError, len(usrs))
+	// канал для оповещения горутин, что мы больше не ждем их выполнения
 	signalCh := make(chan struct{})
 
 	output := make([]users.User, 0, len(usrs))
@@ -39,6 +54,7 @@ func DeactivateUsersSem(usrs []users.User, wgCount int) ([]users.User, error) {
 
 			err := usr.Deactivate()
 
+			// если ловим закрытие сигнального канала, то завершаем функцию
 			select {
 			case outputCh <- semResultWithError{
 				User: usr,
@@ -50,6 +66,8 @@ func DeactivateUsersSem(usrs []users.User, wgCount int) ([]users.User, error) {
 		}(v)
 	}
 
+	// ждем и собираем результаты либо мы получим все, либо выйдет ошибка,
+	// по которой мы перестанем читать
 	for i := len(usrs); i > 0; i-- {
 		res := <-outputCh
 		if res.Err != nil {

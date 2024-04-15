@@ -35,6 +35,7 @@ func processImage(image string) string {
 func worker(id int, jobs <-chan string, results chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for image := range jobs {
+		fmt.Printf("Worker %d started job %s\n", id, image)
 		result := processImage(image)
 		results <- result
 	}
@@ -56,6 +57,7 @@ func main() {
 
 	// Передаем изображения в канал jobs для обработки.
 	for _, image := range images {
+		fmt.Printf("Enqueued image: %s\n", image)
 		jobs <- image
 	}
 	close(jobs)
