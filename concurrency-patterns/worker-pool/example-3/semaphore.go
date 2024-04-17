@@ -1,8 +1,8 @@
-package pattern
+package example_3
 
 import (
 	"fmt"
-	"practice_go/concurrency-patterns/worker-pool/pattern/users"
+	"practice_go/concurrency-patterns/worker-pool/example-3/users"
 )
 
 type Semaphore struct {

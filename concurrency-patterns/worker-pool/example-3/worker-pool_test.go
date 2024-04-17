@@ -1,9 +1,9 @@
-package pattern
+package example_3
 
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"practice_go/concurrency-patterns/worker-pool/pattern/users"
+	"practice_go/concurrency-patterns/worker-pool/example-3/users"
 	"reflect"
 	"sort"
 	"strconv"

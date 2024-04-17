@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,92 +11,46 @@ import (
 // добавляет их в очередь задач. Рабочие горутины могут извлекать
 // запросы из очереди и обрабатывать их конкурентно.
 
-type resultWithError struct {
-	result result
-	err    error
-}
+// Количество рабочих программ (горутин)
+const numWorkers = 3
 
-type result struct {
-}
-
-func worker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan string, results chan<- resultWithError) {
+// Рабочая функция для обработки запросов
+func worker(id int, jobs <-chan *http.Request, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for j := range jobs {
-		fmt.Printf("Enqueued job: %s\n", j)
-		// Обработка задачи и добавление результата в канал результатов
-		results <- resultWithError{
-			result: result{},
-			err:    nil,
-		}
+	for job := range jobs {
+		// Здесь вы можете обрабатывать запрос
+		// В этом примере мы просто выводим URL запроса
+		fmt.Printf("Worker %d processing request for %s\n", id, job.URL.Path)
 	}
 }
 
 func main() {
-	// Создание контекста для управления рабочими горутинами
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
-	defer cancel()
+	// Создаем канал для задач
+	jobs := make(chan *http.Request)
 
-	// Создание каналов для передачи задач и результатов
-	jobs := make(chan string, 100)
-	results := make(chan resultWithError, 100)
-
-	// Определение количества рабочих горутин
-	numWorkers := 5
-
+	// Создаем WaitGroup для отслеживания завершения всех рабочих программ
 	var wg sync.WaitGroup
-	wg.Add(numWorkers)
 
-	// Запуск рабочих горутин
-	for i := 0; i < numWorkers; i++ {
-		go worker(ctx, &wg, jobs, results)
+	// Создаем и запускаем рабочие программы
+	for i := 1; i <= numWorkers; i++ {
+		wg.Add(1)
+		go worker(i, jobs, &wg)
 	}
 
-	// Обработчик HTTP запросов
+	// Обработчик для всех входящих HTTP-запросов
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			fmt.Printf("Method: %s\n", r.Method)
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Декодирование JSON из тела запроса
-		var reqData map[string]interface{}
-		if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
-			fmt.Printf("Error: %v\n", err)
-			http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
-			return
-		}
-
-		log.Printf("Request: %v\n", reqData)
-
-		// Добавление задачи в очередь
-		jobs <- reqData["job"].(string)
-
-		// Отправка успешного ответа
-		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintf(w, "OK")
+		// Помещаем запрос в очередь задач
+		jobs <- r
 	})
 
-	// Запуск HTTP-сервера в горутине
+	// Запускаем HTTP-сервер
 	go func() {
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			fmt.Printf("HTTP server error: %v\n", err)
-		}
+		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 
-	// Ожидание завершения работы всех рабочих горутин
-	go func() {
-		wg.Wait()
-		close(jobs)
-		close(results)
-	}()
+	// Ждем завершения всех рабочих программ
+	wg.Wait()
 
-	// Обработкк результатов
-	for res := range results {
-		if res.err != nil {
-			fmt.Printf("Error: %v\n", res.err)
-			continue
-		}
-		fmt.Printf("Result: %v\n", res.result)
-	}
+	// Закрываем канал задач после завершения работы всех рабочих программ
+	close(jobs)
 }
