@@ -66,6 +66,7 @@ func direct(ctx context.Context, g *errgroup.Group, client internal.RabbitClient
 			msg := message
 			g.Go(func() error {
 				log.Printf("New Message: %s", msg.Body)
+				log.Printf("Message ID: %s", msg.MessageId)
 
 				time.Sleep(10 * time.Second)
 				// Multiple means that we acknowledge a batch of messages, leave false for now
@@ -129,23 +130,23 @@ func fanOut(ctx context.Context, g *errgroup.Group, client internal.RabbitClient
 	<-blocking
 }
 
-func rpc(ctx context.Context, g *errgroup.Group, consumeClient, publishClient internal.RabbitClient) {
+func rpc(ctx context.Context, g *errgroup.Group, mqClient, publishClient internal.RabbitClient) {
 	// blocking is used to block forever
 	var blocking chan struct{}
 
 	// Create Unnamed Queue which will generate a random name, set AutoDelete to True
-	queue, err := consumeClient.CreateQueue("", true, true)
+	queue, err := mqClient.CreateQueue("", true, true)
 	if err != nil {
 		panic(err)
 	}
 	// Create binding between the customer_events exchange and the new Random Queue
 	// Can skip Binding key since fan-out will skip that rule
-	err = consumeClient.CreateBinding(queue.Name, "", "customer_events")
+	err = mqClient.CreateBinding(queue.Name, "", "customer_events")
 	if err != nil {
 		panic(err)
 	}
 
-	messageBus, err := consumeClient.Consume(queue.Name, "email-service", false)
+	messageBus, err := mqClient.Consume(queue.Name, "email-service", false)
 	if err != nil {
 		panic(err)
 	}
@@ -153,21 +154,22 @@ func rpc(ctx context.Context, g *errgroup.Group, consumeClient, publishClient in
 	go func() {
 		for message := range messageBus {
 			// Spawn a worker
+			msg := message
 			g.Go(func() error {
-				log.Printf("New Message: %s", message.Body)
 				// Multiple means that we acknowledge a batch of messages, leave false for now
 				if err := message.Ack(false); err != nil {
-					log.Printf("Acknowledged message failed: Retry ? Handle manually %s\n", message.MessageId)
+					log.Printf("Acknowledged message failed: Retry ? Handle manually %s\n", msg.MessageId)
 					return err
 				}
 
-				log.Printf("Acknowledged message %s\n", message.ReplyTo)
+				log.Printf("Acknowledged message %s\n", msg.ReplyTo)
 
 				// Use the msg.ReplyTo to send the message to the proper Queue
 				err = publishClient.Send(ctx, "customer_callbacks", message.ReplyTo, amqp091.Publishing{
-					ContentType:  "text/plain",      // The payload we send is plaintext, could be JSON or others...
-					DeliveryMode: amqp091.Transient, // This tells rabbitMQ to drop messages if restarted
-					Body:         []byte("RPC Completed"),
+					ContentType:   "text/plain",      // The payload we send is plaintext, could be JSON or others...
+					DeliveryMode:  amqp091.Transient, // This tells rabbitMQ to drop messages if restarted
+					Body:          []byte("RPC Completed"),
+					CorrelationId: msg.CorrelationId,
 				})
 				if err != nil {
 					panic(err)

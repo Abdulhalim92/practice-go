@@ -62,23 +62,24 @@ func direct(ctx context.Context, client internal.RabbitClient) {
 	}
 
 	// Create binding between the customer_events exchange and the customers-created queue
-	err = client.CreateBinding("customers_created", "customers.created.*", "customers_events")
+	err = client.CreateBinding("customers_created", "customers.created.*", "customer_events")
 	if err != nil {
 		panic(err)
 	}
 
 	// Created binding between the customer_events exchange and the customers-test queue
-	err = client.CreateBinding("customers_test", "customers.*", "customers_events")
+	err = client.CreateBinding("customers_test", "customers.*", "customer_events")
 	if err != nil {
 		panic(err)
 	}
 
 	// Create customer from Sweden
 	for i := 0; i < 10; i++ {
-		if err := client.Send(ctx, "customers_events", "customers.created.se", amqp091.Publishing{
+		if err := client.Send(ctx, "customer_events", "customers.created.se", amqp091.Publishing{
 			ContentType:  "text/plain",       // The payload we send is plaintext, could be JSON or others...
 			DeliveryMode: amqp091.Persistent, // This tells rabbitMQ that this manage should be Saved if no resources accepts in before a restart (durable)
 			Body:         []byte("An cool message between services"),
+			ReplyTo:      "customers_created",
 		}); err != nil {
 			panic(err)
 		}
@@ -126,6 +127,7 @@ func rpc(ctx context.Context, produceClient, consumeClient internal.RabbitClient
 
 	go func() {
 		for message := range messageBus {
+			log.Printf("Message ID %s\n", message.MessageId)
 			log.Printf("Message Callback %s\n", message.CorrelationId)
 		}
 	}()
