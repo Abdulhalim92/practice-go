@@ -43,9 +43,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	//direct(ctx, client)
+	direct(ctx, client)
 	//fanOut(ctx, client)
-	rpc(ctx, client, consumeClient)
+	//rpc(ctx, client, consumeClient)
 
 	log.Println(client)
 }
@@ -79,7 +79,6 @@ func direct(ctx context.Context, client internal.RabbitClient) {
 			ContentType:  "text/plain",       // The payload we send is plaintext, could be JSON or others...
 			DeliveryMode: amqp091.Persistent, // This tells rabbitMQ that this manage should be Saved if no resources accepts in before a restart (durable)
 			Body:         []byte("An cool message between services"),
-			ReplyTo:      "customers_created",
 		}); err != nil {
 			panic(err)
 		}

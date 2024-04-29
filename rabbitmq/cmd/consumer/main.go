@@ -36,6 +36,7 @@ func main() {
 		panic(err)
 	}
 	// -->> rpc <<--
+	defer publishClient.Close()
 
 	// Set a timeout for 15 secs
 	ctx := context.Background()
@@ -46,9 +47,9 @@ func main() {
 	// Set amount of concurrent tasks
 	g.SetLimit(10)
 
-	//direct(ctx, g, mqClient)
+	direct(ctx, g, mqClient)
 	//fanOut(ctx, g, mqClient)
-	rpc(ctx, g, mqClient, publishClient)
+	//rpc(ctx, g, mqClient, publishClient)
 }
 
 func direct(ctx context.Context, g *errgroup.Group, client internal.RabbitClient) {
@@ -143,6 +144,11 @@ func rpc(ctx context.Context, g *errgroup.Group, mqClient, publishClient interna
 	// Can skip Binding key since fan-out will skip that rule
 	err = mqClient.CreateBinding(queue.Name, "", "customer_events")
 	if err != nil {
+		panic(err)
+	}
+
+	// Apply Qos to limit amount of messages to consume
+	if err := mqClient.ApplyQos(10, 0, true); err != nil {
 		panic(err)
 	}
 
