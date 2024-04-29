@@ -164,8 +164,21 @@ func rpc(ctx context.Context, g *errgroup.Group, consumeClient, publishClient in
 				log.Printf("Acknowledged message %s\n", message.ReplyTo)
 
 				// Use the msg.ReplyTo to send the message to the proper Queue
-				err = publishClient.Send(ctx, "customer_callbacks", message.ReplyTo, amqp091.Publishing{})
+				err = publishClient.Send(ctx, "customer_callbacks", message.ReplyTo, amqp091.Publishing{
+					ContentType:  "text/plain",      // The payload we send is plaintext, could be JSON or others...
+					DeliveryMode: amqp091.Transient, // This tells rabbitMQ to drop messages if restarted
+					Body:         []byte("RPC Completed"),
+				})
+				if err != nil {
+					panic(err)
+				}
+
+				return nil
 			})
 		}
 	}()
+
+	log.Println("Consuming, to close the program press CTRL+C")
+	// This will block forever
+	<-blocking
 }
