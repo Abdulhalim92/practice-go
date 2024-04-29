@@ -19,7 +19,7 @@ func worker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan Job, results ch
 			// fan-in job execution multiplexing returns into the results channel
 			results <- jobs.execute(ctx)
 		case <-ctx.Done():
-			fmt.Printf("worker: context cancelled. Error details: %v\n", ctx.Err())
+			fmt.Printf("worker: my-context cancelled. Error details: %v\n", ctx.Err())
 			results <- Result{
 				Err: ctx.Err(),
 			}
