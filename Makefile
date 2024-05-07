@@ -1,4 +1,7 @@
 rabbitmq:
 	docker compose -f rabbitmq/rabbit-compose.yaml up -d
 
-.PHONY: rabbitmq
+stop:
+	docker compose -f rabbitmq/rabbit-compose.yaml down
+
+.PHONY: rabbitmq stop
