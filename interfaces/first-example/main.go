@@ -52,6 +52,16 @@ type Snake struct {
 	Name string
 }
 
+func (s Snake) ReceiveAffection(from Human) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s Snake) GiveAffection(to Human) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func Pet(animal DomesticAnimal, human Human) {
 	animal.GiveAffection(human)
 	animal.ReceiveAffection(human)
@@ -67,6 +77,10 @@ func main() {
 	var d Dog
 	d.Name = "Medor"
 
+	var s Snake
+	s.Name = "lalala"
+
 	Pet(c, john)
 	Pet(d, john)
+	Pet(s, john)
 }
